@@ -64,6 +64,8 @@ Aplicación backend en Flask que demuestra mejores prácticas de DevOps y Cloud:
                 │  Serverless VPC Connector│
                 └──────────────────────────┘
 ```
+> ⚠️ El siguiente diagrama representa la **arquitectura objetivo de producción**.  
+> El entorno de evaluación utiliza una base de datos containerizada debido a restricciones de facturación en GCP.
 
 ---
 
@@ -213,18 +215,18 @@ Respuesta:
 
 ### Secrets de GitHub Requeridos
 
-| Secret | Descripción |
-|:-------|:------------|
-| `GCP_PROJECT_ID` | ID del proyecto en Google Cloud |
-| `GCP_SA_KEY` | JSON key de la Service Account |
-| `DEV_DB_HOST` | Host de la BD de DEV |
-| `DEV_DB_USER` | Usuario de la BD de DEV |
-| `DEV_DB_PASSWORD` | Contraseña de la BD de DEV |
-| `PROD_DB_HOST` | Host de la BD de PROD |
-| `PROD_DB_USER` | Usuario de la BD de PROD |
-| `PROD_DB_PASSWORD` | Contraseña de la BD de PROD |
-| `VPC_CONNECTOR` | Nombre del Serverless VPC Connector |
-| `GCP_SERVICE_ACCOUNT` | Email de la Service Account de runtime |
+### Secrets (Evaluación)
+- DEV_DB_HOST
+- DEV_DB_USER
+- DEV_DB_PASSWORD
+
+### Secrets (Producción - Arquitectura Objetivo)
+- GCP_PROJECT_ID
+- GCP_SA_KEY
+- VPC_CONNECTOR
+- GCP_SERVICE_ACCOUNT
+
+
 
 > Algunos secrets listados están pensados para la arquitectura objetivo de producción y se documentan por completitud.
 
