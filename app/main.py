@@ -1,6 +1,7 @@
 from flask import Flask, jsonify
-from app.db import get_connection
+
 from app.config import Config
+from app.db import get_connection
 
 app = Flask(__name__)
 
@@ -12,7 +13,7 @@ def root():
         version="1.0.0",
         status="running",
         env=Config.APP_ENV,
-        endpoints=["/health", "/info"]
+        endpoints=["/health", "/info"],
     )
 
 
