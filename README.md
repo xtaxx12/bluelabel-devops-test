@@ -1,10 +1,10 @@
-# BlueLabel DevOps - Technical Test
+# BlueLabel DevOps - Prueba Técnica
 
-Flask backend application demonstrating DevOps and Cloud best practices: containerization, environment-based configuration, CI/CD pipelines, and production-ready architecture.
+Aplicación backend en Flask que demuestra mejores prácticas de DevOps y Cloud: containerización, configuración basada en entorno, pipelines CI/CD y arquitectura lista para producción.
 
 ---
 
-## Requirements
+## Requisitos
 
 - Python 3.11+
 - Docker & Docker Compose
@@ -12,16 +12,32 @@ Flask backend application demonstrating DevOps and Cloud best practices: contain
 
 ---
 
-## Architecture
+## Decisiones Técnicas
+
+- Se eligió Flask por su simplicidad y claridad.
+- Se usó Docker para garantizar consistencia entre entornos.
+- Se seleccionó GitHub Actions para CI/CD por su integración nativa con GitHub.
+- Se prefirió Cloud Run sobre GKE para reducir la carga operativa.
+
+## Próximos Pasos (Producción)
+
+- Habilitar facturación de GCP y provisionar Cloud SQL con IP privada
+- Configurar Serverless VPC Connector
+- Agregar monitoreo con Cloud Monitoring y alertas
+- Implementar migraciones de base de datos
+
+---
+
+## Arquitectura
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                        GitHub Repository                        │
+│                     Repositorio GitHub                          │
 └─────────────────────────────────────────────────────────────────┘
                                 │
                                 ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                      GitHub Actions CI/CD                        │
+│                    GitHub Actions CI/CD                          │
 │  ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐  │
 │  │   Lint   │───▶│   Test   │───▶│  Build   │───▶│  Deploy  │  │
 │  └──────────┘    └──────────┘    └──────────┘    └──────────┘  │
@@ -37,77 +53,77 @@ Flask backend application demonstrating DevOps and Cloud best practices: contain
                 │                               │
                 ▼                               ▼
 ┌──────────────────────────┐    ┌──────────────────────────┐
-│   Cloud SQL (Private)    │    │   Cloud SQL (Private)    │
+│   Cloud SQL (Privado)    │    │   Cloud SQL (Privado)    │
 │   DB: app_dev            │    │   DB: app_prod           │
 └──────────────────────────┘    └──────────────────────────┘
                 │                               │
                 └───────────────┬───────────────┘
                                 ▼
                 ┌──────────────────────────┐
-                │    VPC Private Network   │
+                │     Red Privada VPC      │
                 │  Serverless VPC Connector│
                 └──────────────────────────┘
 ```
 
 ---
 
-## Local Development
+## Desarrollo Local
 
-### Using Docker Compose (Recommended)
+### Usando Docker Compose (Recomendado)
 
 ```bash
-# Start application with MySQL
+# Iniciar aplicación con MySQL
 docker-compose up --build
 
-# Application runs at http://localhost:8080
+# La aplicación corre en http://localhost:8080
 ```
 
-### Using Docker Only
+### Usando Solo Docker
 
 ```bash
-# Build image
+# Construir imagen
 docker build -t bluelabel-app .
 
-# Run container
+# Ejecutar contenedor
 docker run -p 8080:8080 --env-file .env bluelabel-app
 ```
 
-### Using Python
+### Usando Python
 
 ```bash
-# Create virtual environment
+# Crear entorno virtual
 python -m venv .venv
 
-# Activate (Windows)
+# Activar (Windows)
 .venv\Scripts\activate
 
-# Activate (Linux/Mac)
+# Activar (Linux/Mac)
 source .venv/bin/activate
 
-# Install dependencies
+# Instalar dependencias
 pip install -r requirements.txt
 
-# Run application
+# Ejecutar aplicación
 python -m app.main
 ```
 
 ---
 
-## API Endpoints
+## Endpoints de la API
 
-| Method | Route | Description |
-|:-------|:------|:------------|
-| GET | `/` | API information |
+| Método | Ruta | Descripción |
+|:-------|:-----|:------------|
+| GET | `/` | Información de la API |
 | GET | `/health` | Health check |
-| GET | `/info` | Database message |
+| GET | `/info` | Mensaje de la base de datos |
 
-### Examples
+### Ejemplos
 
-**Root Endpoint**
+**Endpoint Raíz**
 ```bash
 curl http://localhost:8080/
 ```
-Response:
+Respuesta:
 ```json
 {
   "service": "BlueLabel DevOps API",
@@ -122,7 +138,7 @@ Response:
 ```bash
 curl http://localhost:8080/health
 ```
-Response:
+Respuesta:
 ```json
 {
   "status": "ok",
@@ -130,35 +146,35 @@ Response:
 }
 ```
 
-**Database Info**
+**Info de Base de Datos**
 ```bash
 curl http://localhost:8080/info
 ```
-Response:
+Respuesta:
 ```json
 {
-  "message": "Hello from BlueLabel DevOps!"
+  "message": "Hello from DEV"
 }
 ```
 
 ---
 
-## Environment Variables
+## Variables de Entorno
 
-| Variable | Description | Default |
+| Variable | Descripción | Default |
 |:---------|:------------|:--------|
-| `APP_ENV` | Environment (dev/prod) | `dev` |
-| `DB_HOST` | MySQL host | - |
-| `DB_PORT` | MySQL port | `3306` |
-| `DB_NAME` | Database name | - |
-| `DB_USER` | MySQL user | - |
-| `DB_PASSWORD` | MySQL password | - |
+| `APP_ENV` | Entorno (dev/prod) | `dev` |
+| `DB_HOST` | Host de MySQL | - |
+| `DB_PORT` | Puerto de MySQL | `3306` |
+| `DB_NAME` | Nombre de la base de datos | - |
+| `DB_USER` | Usuario de MySQL | - |
+| `DB_PASSWORD` | Contraseña de MySQL | - |
 
 ---
 
-## CI/CD Pipeline
+## Pipeline CI/CD
 
-### Pipeline Overview
+### Visión General del Pipeline
 
 ```
 ┌────────────────┐     ┌────────────────┐     ┌────────────────┐
@@ -170,125 +186,130 @@ Response:
                               ▼                                                ▼
                    ┌────────────────────┐                         ┌────────────────────┐
                    │    DEPLOY DEV      │                         │   DEPLOY PROD      │
-                   │    (Automatic)     │                         │ (Manual Approval)  │
+                   │   (Automático)     │                         │(Aprobación Manual) │
                    └────────────────────┘                         └────────────────────┘
 ```
 
+> Nota: El diagrama anterior representa la **arquitectura objetivo de producción**.  
+> Debido a restricciones de facturación de GCP, el entorno de evaluación usa una configuración de base de datos simplificada, detallada más abajo.
+
 ### Workflows
 
-| Workflow | Trigger | Description |
+| Workflow | Trigger | Descripción |
 |:---------|:--------|:------------|
-| `ci.yml` | Push/PR to main | Lint, test, build validation |
-| `deploy-dev.yml` | Push to main | Automatic deploy to DEV |
-| `deploy-prod.yml` | Tag v* or push to prod | Deploy to PROD with approval gate |
+| `ci.yml` | Push/PR a main | Lint, test, validación de build |
+| `deploy-dev.yml` | Push a main | Deploy automático a DEV |
+| `deploy-prod.yml` | Tag v* o push a prod | Deploy a PROD con gate de aprobación |
 
-### DEV Deployment
-- **Trigger:** Push to `main` branch
-- **Process:** Automatic
-- **Steps:** Test → Build → Deploy
+### Deploy a DEV
+- **Trigger:** Push a rama `main`
+- **Proceso:** Automático
+- **Pasos:** Test → Build → Deploy
 
-### PROD Deployment
-- **Trigger:** Tag `v*` (e.g., v1.0.0) or push to `prod` branch
-- **Process:** Requires manual approval
-- **Steps:** Test → Build → Approval Gate → Deploy
+### Deploy a PROD
+- **Trigger:** Tag `v*` (ej: v1.0.0) o push a rama `prod`
+- **Proceso:** Requiere aprobación manual
+- **Pasos:** Test → Build → Gate de Aprobación → Deploy
 
-### GitHub Secrets Required
+### Secrets de GitHub Requeridos
 
-| Secret | Description |
+| Secret | Descripción |
 |:-------|:------------|
-| `GCP_PROJECT_ID` | Google Cloud project ID |
-| `GCP_SA_KEY` | Service account JSON key |
-| `DEV_DB_HOST` | DEV database host |
-| `DEV_DB_USER` | DEV database user |
-| `DEV_DB_PASSWORD` | DEV database password |
-| `PROD_DB_HOST` | PROD database host |
-| `PROD_DB_USER` | PROD database user |
-| `PROD_DB_PASSWORD` | PROD database password |
-| `VPC_CONNECTOR` | Serverless VPC connector name |
-| `GCP_SERVICE_ACCOUNT` | Runtime service account email |
+| `GCP_PROJECT_ID` | ID del proyecto en Google Cloud |
+| `GCP_SA_KEY` | JSON key de la Service Account |
+| `DEV_DB_HOST` | Host de la BD de DEV |
+| `DEV_DB_USER` | Usuario de la BD de DEV |
+| `DEV_DB_PASSWORD` | Contraseña de la BD de DEV |
+| `PROD_DB_HOST` | Host de la BD de PROD |
+| `PROD_DB_USER` | Usuario de la BD de PROD |
+| `PROD_DB_PASSWORD` | Contraseña de la BD de PROD |
+| `VPC_CONNECTOR` | Nombre del Serverless VPC Connector |
+| `GCP_SERVICE_ACCOUNT` | Email de la Service Account de runtime |
+
+> Algunos secrets listados están pensados para la arquitectura objetivo de producción y se documentan por completitud.
 
 ---
 
-## Project Structure
+## Estructura del Proyecto
 
 ```
 ├── .github/
 │   └── workflows/
-│       ├── ci.yml              # CI pipeline
-│       ├── deploy-dev.yml      # DEV deployment
-│       └── deploy-prod.yml     # PROD deployment
+│       ├── ci.yml              # Pipeline CI
+│       ├── deploy-dev.yml      # Deploy a DEV
+│       └── deploy-prod.yml     # Deploy a PROD
 ├── app/
 │   ├── __init__.py
-│   ├── config.py               # Environment configuration
-│   ├── db.py                   # Database connection
-│   └── main.py                 # Flask endpoints
+│   ├── config.py               # Configuración de entorno
+│   ├── db.py                   # Conexión a base de datos
+│   └── main.py                 # Endpoints Flask
 ├── tests/
-│   ├── conftest.py             # Pytest fixtures
-│   └── test_endpoints.py       # Unit tests
-├── docs/                       # Screenshots folder
+│   ├── conftest.py             # Fixtures de Pytest
+│   └── test_endpoints.py       # Tests unitarios
+├── docs/                       # Carpeta para capturas de pantalla
 ├── .dockerignore
 ├── .env.example
 ├── .gitignore
-├── docker-compose.yml          # Local development
-├── Dockerfile                  # Multi-stage build
-├── init.sql                    # Database initialization
+├── docker-compose.yml          # Desarrollo local
+├── Dockerfile                  # Build multi-stage
+├── init.sql                    # Inicialización de BD
 └── requirements.txt
 ```
 
 ---
 
-## Cloud URLs
+## URLs en la Nube
 
-| Environment | URL | Status |
-|:------------|:----|:-------|
-| DEV | `https://bluelabel-app-dev-xxxxx.run.app` | Pending |
-| PROD | `https://bluelabel-app-prod-xxxxx.run.app` | Pending |
-
----
-
-## Database Architecture
-
-### Production Setup
-- Cloud SQL MySQL with private IP
-- VPC network connectivity
-- Serverless VPC Connector for Cloud Run
-
-### Evaluation Environment
-Due to GCP billing requirements, Cloud SQL was not provisioned. Local containerized MySQL is used for demonstration.
-
-| Component | Evaluation | Production |
-|:----------|:-----------|:-----------|
-| Database | Docker MySQL | Cloud SQL |
-| Network | Docker network | VPC private IP |
-| Connection | Direct | VPC Connector |
+| Entorno | URL |
+|:--------|:----|
+| DEV | No desplegado (entorno de evaluación) |
+| PROD | No desplegado (entorno de evaluación) |
 
 ---
 
-## Security
+## Arquitectura de Base de Datos
 
-- No credentials in repository
-- Environment variables for sensitive data
-- Minimal base Docker image (python:slim)
-- Non-root container user
-- IAM-based access with least privilege
+### Configuración de Producción
+- Cloud SQL MySQL con IP privada
+- Conectividad por red VPC
+- Serverless VPC Connector para Cloud Run
+
+### Entorno de Evaluación
+Debido a requisitos de facturación de GCP, no se provisionó Cloud SQL. Se usa MySQL containerizado local para demostración.
+
+| Componente | Evaluación | Producción |
+|:-----------|:-----------|:-----------|
+| Base de datos | MySQL en Docker | Cloud SQL |
+| Red | Red de Docker | IP privada VPC |
+| Conexión | Directa | VPC Connector |
 
 ---
 
-## Running Tests
+## Seguridad
+
+- Sin credenciales en el repositorio
+- Variables de entorno para datos sensibles
+- Imagen Docker base mínima (python:slim)
+- Usuario no-root en el contenedor
+- Acceso basado en IAM con privilegios mínimos
+
+---
+
+## Ejecutar Tests
 
 ```bash
-# Install test dependencies
+# Instalar dependencias de testing
 pip install pytest pytest-cov
 
-# Run tests
+# Ejecutar tests
 pytest tests/ -v
 
-# Run with coverage
+# Ejecutar con cobertura
 pytest tests/ -v --cov=app
 ```
 
 ---
 
-## License
+## Licencia
 
 MIT
