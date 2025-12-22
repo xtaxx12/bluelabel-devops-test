@@ -6,4 +6,4 @@ CREATE TABLE IF NOT EXISTS info (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-INSERT INTO info (message) VALUES ('Hello from BlueLabel DevOps!');
+INSERT INTO info (message) VALUES ('Hello from DEV');
