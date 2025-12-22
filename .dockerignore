@@ -1,44 +1,25 @@
-# Git
 .git
 .gitignore
 
-# Environment files (SECRETS - CRITICAL)
 .env
 .env.*
 !.env.example
 
-# Virtual environments (not needed, image installs deps)
 .venv/
 venv/
-ENV/
-
-# Python cache
 __pycache__/
 *.py[cod]
-*.pyo
 
-# IDE/Editor
 .idea/
 .vscode/
-*.swp
 
-# Testing (not needed in production image)
 tests/
 .pytest_cache/
 .coverage
-htmlcov/
 
-# Documentation
 *.md
-!README.md
-
-# Agents config (development only)
 .agents/
-
-# OS files
 .DS_Store
 Thumbs.db
-
-# Docker files
 Dockerfile*
 docker-compose*

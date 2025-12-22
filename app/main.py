@@ -18,13 +18,11 @@ def root():
 
 @app.route("/health")
 def health():
-    # Health check endpoint
     return jsonify(status="ok", env=Config.APP_ENV)
 
 
 @app.route("/info")
 def info():
-    # Obtiene mensaje desde la base de datos
     try:
         conn = get_connection()
         cursor = conn.cursor()

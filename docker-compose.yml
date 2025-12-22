@@ -1,9 +1,6 @@
 version: '3.8'
 
 services:
-  # ========================================
-  # Aplicación Flask
-  # ========================================
   app:
     build: .
     container_name: bluelabel-app
@@ -23,9 +20,6 @@ services:
     networks:
       - bluelabel-network
 
-  # ========================================
-  # Base de Datos MySQL
-  # ========================================
   db:
     image: mysql:8.0
     container_name: bluelabel-db
