@@ -1,7 +1,3 @@
-# ========================================
-# Dockerfile - Multi-stage build (DevOps Best Practices)
-# ========================================
-
 # Stage 1: Builder - Install dependencies
 FROM python:3.11-slim AS builder
 

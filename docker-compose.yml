@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  # ========================================
+  # Aplicación Flask
+  # ========================================
+  app:
+    build: .
+    container_name: bluelabel-app
+    ports:
+      - "8080:8080"
+    environment:
+      - APP_ENV=dev
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_NAME=bluelabel_db
+      - DB_USER=app_user
+      - DB_PASSWORD=app_password
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - bluelabel-network
+
+  # ========================================
+  # Base de Datos MySQL
+  # ========================================
+  db:
+    image: mysql:8.0
+    container_name: bluelabel-db
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_DATABASE: bluelabel_db
+      MYSQL_USER: app_user
+      MYSQL_PASSWORD: app_password
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot_password"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - bluelabel-network
+
+networks:
+  bluelabel-network:
+    driver: bridge
+
+volumes:
+  mysql_data:

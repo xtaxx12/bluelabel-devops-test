@@ -1,7 +1,3 @@
-# ========================================
-# Docker Ignore - Reduce image size & prevent leaks
-# ========================================
-
 # Git
 .git
 .gitignore
