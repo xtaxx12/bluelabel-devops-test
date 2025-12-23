@@ -74,38 +74,37 @@ Aplicación backend en Flask que demuestra mejores prácticas de DevOps y Cloud:
 ### Usando Docker Compose (Recomendado)
 
 ```bash
-# Iniciar aplicación con MySQL
+
 docker-compose up --build
 
-# La aplicación corre en http://localhost:8080
+
 ```
 
 ### Usando Solo Docker
 
 ```bash
-# Construir imagen
+
 docker build -t bluelabel-app .
 
-# Ejecutar contenedor
+
 docker run -p 8080:8080 --env-file .env bluelabel-app
 ```
 
 ### Usando Python
 
 ```bash
-# Crear entorno virtual
+
 python -m venv .venv
 
-# Activar (Windows)
+
 .venv\Scripts\activate
 
-# Activar (Linux/Mac)
+
 source .venv/bin/activate
 
-# Instalar dependencias
+
 pip install -r requirements.txt
 
-# Ejecutar aplicación
 python -m app.main
 ```
 
@@ -215,20 +214,119 @@ Respuesta:
 
 ### Secrets de GitHub Requeridos
 
-### Secrets (Evaluación)
-- DEV_DB_HOST
-- DEV_DB_USER
-- DEV_DB_PASSWORD
+| Secret | Descripción | Requerido |
+|--------|-------------|-----------|
+| `GCP_PROJECT_ID` | ID del proyecto en GCP | ✅ |
+| `GCP_SA_KEY` | JSON de la Service Account | ✅ |
 
-### Secrets (Producción - Arquitectura Objetivo)
-- GCP_PROJECT_ID
-- GCP_SA_KEY
-- VPC_CONNECTOR
-- GCP_SERVICE_ACCOUNT
+---
 
+## Guía de Deploy a GCP
 
+### Paso 1: Configurar Proyecto en GCP
 
-> Algunos secrets listados están pensados para la arquitectura objetivo de producción y se documentan por completitud.
+```bash
+# Crear proyecto (o usar uno existente)
+gcloud projects create PROJECT_ID --name="BlueLabel App"
+
+# Establecer proyecto activo
+gcloud config set project PROJECT_ID
+
+# Habilitar APIs necesarias
+gcloud services enable \
+  run.googleapis.com \
+  artifactregistry.googleapis.com \
+  cloudbuild.googleapis.com
+```
+
+### Paso 2: Crear Artifact Registry
+
+```bash
+gcloud artifacts repositories create bluelabel-repo \
+  --repository-format=docker \
+  --location=us-central1 \
+  --description="BlueLabel Docker images"
+```
+
+### Paso 3: Crear Service Account
+
+```bash
+# Crear Service Account
+gcloud iam service-accounts create github-actions \
+  --display-name="GitHub Actions"
+
+# Asignar roles necesarios
+PROJECT_ID=$(gcloud config get-value project)
+
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+  --member="serviceAccount:github-actions@${PROJECT_ID}.iam.gserviceaccount.com" \
+  --role="roles/run.admin"
+
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+  --member="serviceAccount:github-actions@${PROJECT_ID}.iam.gserviceaccount.com" \
+  --role="roles/artifactregistry.writer"
+
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+  --member="serviceAccount:github-actions@${PROJECT_ID}.iam.gserviceaccount.com" \
+  --role="roles/iam.serviceAccountUser"
+
+# Generar key JSON
+gcloud iam service-accounts keys create key.json \
+  --iam-account=github-actions@${PROJECT_ID}.iam.gserviceaccount.com
+```
+
+### Paso 4: Configurar Secrets en GitHub
+
+1. Ve a tu repositorio en GitHub
+2. Settings → Secrets and variables → Actions
+3. Agregar los siguientes secrets:
+
+| Secret | Valor |
+|--------|-------|
+| `GCP_PROJECT_ID` | Tu Project ID de GCP |
+| `GCP_SA_KEY` | Contenido completo del archivo `key.json` |
+
+### Paso 5: Configurar Environments en GitHub
+
+1. Settings → Environments
+2. Crear environment `development`
+3. Crear environment `production` con:
+   - ✅ Required reviewers (agregar aprobadores)
+   - ✅ Wait timer (opcional)
+
+### Paso 6: Desplegar
+
+**DEV (automático):**
+```bash
+git push origin main
+```
+
+**PROD (con aprobación):**
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+### Verificar Deploy
+
+```bash
+# Ver servicios desplegados
+gcloud run services list --region=us-central1
+
+# Ver logs
+gcloud run services logs read bluelabel-app-dev --region=us-central1
+```
+
+### Eliminar Recursos (Cleanup)
+
+```bash
+# Eliminar servicios de Cloud Run
+gcloud run services delete bluelabel-app-dev --region=us-central1 --quiet
+gcloud run services delete bluelabel-app-prod --region=us-central1 --quiet
+
+# Eliminar repositorio de Artifact Registry
+gcloud artifacts repositories delete bluelabel-repo --location=us-central1 --quiet
+```
 
 ---
 

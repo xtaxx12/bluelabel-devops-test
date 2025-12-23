@@ -10,6 +10,7 @@ env:
   REGION: us-central1
   SERVICE_NAME: bluelabel-app-dev
   IMAGE_NAME: bluelabel-app
+  REPOSITORY: bluelabel-repo
 
 concurrency:
   group: deploy-dev
@@ -39,8 +40,8 @@ jobs:
         env:
           APP_ENV: dev
 
-  build:
-    name: Build Docker Image
+  build-and-push:
+    name: Build & Push to Artifact Registry
     runs-on: ubuntu-latest
     needs: test
     
@@ -50,31 +51,72 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Setup gcloud CLI
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build image
+      - name: Build and Push image
         uses: docker/build-push-action@v5
         with:
           context: .
-          push: false
+          push: true
           tags: |
-            ${{ env.IMAGE_NAME }}:${{ github.sha }}
-            ${{ env.IMAGE_NAME }}:dev-latest
+            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:dev-latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
   deploy:
     name: Deploy to Cloud Run (DEV)
     runs-on: ubuntu-latest
-    needs: build
+    needs: build-and-push
     environment: 
       name: development
+      url: ${{ steps.deploy.outputs.url }}
     
     steps:
-      - name: Deploy info
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Setup gcloud CLI
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Deploy to Cloud Run
+        id: deploy
         run: |
-          echo "DEV Deployment"
-          echo "Image: ${{ env.IMAGE_NAME }}:${{ github.sha }}"
-          echo "Service: ${{ env.SERVICE_NAME }}"
-          echo "Region: ${{ env.REGION }}"
+          gcloud run deploy ${{ env.SERVICE_NAME }} \
+            --image ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+            --region ${{ env.REGION }} \
+            --platform managed \
+            --allow-unauthenticated \
+            --port 8080 \
+            --memory 512Mi \
+            --cpu 1 \
+            --min-instances 0 \
+            --max-instances 10 \
+            --set-env-vars "APP_ENV=dev" \
+            --quiet
+
+          URL=$(gcloud run services describe ${{ env.SERVICE_NAME }} --region ${{ env.REGION }} --format 'value(status.url)')
+          echo "url=${URL}" >> $GITHUB_OUTPUT
+          echo "✅ Deployed to: ${URL}"
+
+      - name: Deployment Summary
+        run: |
+          echo "## DEV Deployment Complete 🚀" >> $GITHUB_STEP_SUMMARY
+          echo "- **Service:** ${{ env.SERVICE_NAME }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Region:** ${{ env.REGION }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image:** ${{ env.IMAGE_NAME }}:${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **URL:** ${{ steps.deploy.outputs.url }}" >> $GITHUB_STEP_SUMMARY

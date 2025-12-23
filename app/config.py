@@ -3,7 +3,6 @@ import os
 
 class Config:
     APP_ENV = os.getenv("APP_ENV", "dev")
-
     DB_HOST = os.getenv("DB_HOST")
     DB_PORT = os.getenv("DB_PORT", "3306")
     DB_NAME = os.getenv("DB_NAME")

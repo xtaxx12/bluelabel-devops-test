@@ -18,18 +18,20 @@ env:
   REGION: us-central1
   SERVICE_NAME: bluelabel-app-prod
   IMAGE_NAME: bluelabel-app
+  REPOSITORY: bluelabel-repo
 
 concurrency:
   group: deploy-prod
   cancel-in-progress: false
 
 jobs:
-  build:
-    name: Build & Validate
+  build-and-push:
+    name: Build, Test & Push
     runs-on: ubuntu-latest
     
     outputs:
       version: ${{ steps.version.outputs.version }}
+      image_url: ${{ steps.version.outputs.image_url }}
     
     steps:
       - uses: actions/checkout@v4
@@ -47,6 +49,7 @@ jobs:
             VERSION="prod-$(date +%Y%m%d%H%M%S)"
           fi
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "image_url=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:${VERSION}" >> $GITHUB_OUTPUT
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -58,52 +61,102 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install -r requirements.txt
-          pytest tests/ -v || true
+          pytest tests/ -v
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Setup gcloud CLI
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
 
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build image
+      - name: Build and Push image
         uses: docker/build-push-action@v5
         with:
           context: .
-          push: false
+          push: true
           tags: |
-            ${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}
-            ${{ env.IMAGE_NAME }}:prod-latest
+            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}
+            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:prod-latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
   approval:
     name: Awaiting Approval
     runs-on: ubuntu-latest
-    needs: build
+    needs: build-and-push
     environment: production
     
     steps:
       - name: Release info
         run: |
-          echo "Version: ${{ needs.build.outputs.version }}"
-          echo "Requested by: ${{ github.actor }}"
-          echo "Commit: ${{ github.sha }}"
+          echo "## Production Release Pending Approval ⏳" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version:** ${{ needs.build-and-push.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Requested by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
 
   deploy:
     name: Deploy to Cloud Run (PROD)
     runs-on: ubuntu-latest
-    needs: [build, approval]
-    environment: production
+    needs: [build-and-push, approval]
+    environment: 
+      name: production
+      url: ${{ steps.deploy.outputs.url }}
     
     steps:
-      - name: Deploy info
-        run: |
-          echo "PROD Deployment"
-          echo "Version: ${{ needs.build.outputs.version }}"
-          echo "Service: ${{ env.SERVICE_NAME }}"
-          echo "Region: ${{ env.REGION }}"
+      - uses: actions/checkout@v4
 
-      - name: Create Release
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Setup gcloud CLI
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Deploy to Cloud Run
+        id: deploy
+        run: |
+          gcloud run deploy ${{ env.SERVICE_NAME }} \
+            --image ${{ needs.build-and-push.outputs.image_url }} \
+            --region ${{ env.REGION }} \
+            --platform managed \
+            --allow-unauthenticated \
+            --port 8080 \
+            --memory 1Gi \
+            --cpu 2 \
+            --min-instances 1 \
+            --max-instances 100 \
+            --set-env-vars "APP_ENV=prod" \
+            --quiet
+
+          URL=$(gcloud run services describe ${{ env.SERVICE_NAME }} --region ${{ env.REGION }} --format 'value(status.url)')
+          echo "url=${URL}" >> $GITHUB_OUTPUT
+          echo "✅ Deployed to: ${URL}"
+
+      - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
         with:
-          name: Release ${{ needs.build.outputs.version }}
+          name: Release ${{ needs.build-and-push.outputs.version }}
           generate_release_notes: true
+          body: |
+            ## Deployment Info
+            - **Service:** ${{ env.SERVICE_NAME }}
+            - **Region:** ${{ env.REGION }}
+            - **URL:** ${{ steps.deploy.outputs.url }}
+
+      - name: Deployment Summary
+        run: |
+          echo "## PROD Deployment Complete 🚀" >> $GITHUB_STEP_SUMMARY
+          echo "- **Service:** ${{ env.SERVICE_NAME }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version:** ${{ needs.build-and-push.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Region:** ${{ env.REGION }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **URL:** ${{ steps.deploy.outputs.url }}" >> $GITHUB_STEP_SUMMARY

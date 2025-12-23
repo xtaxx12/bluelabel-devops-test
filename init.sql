@@ -7,3 +7,4 @@ CREATE TABLE IF NOT EXISTS info (
 );
 
 INSERT INTO info (message) VALUES ('Hello from DEV');
+INSERT INTO info (message) VALUES ('Hello from PROD');
